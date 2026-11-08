@@ -1,0 +1,112 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "expense-tracker"
+version = "0.2.0"
+description = "AI-native expense tracker: a FastMCP server, a LangChain/LangGraph AI host, and a Streamlit UI."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Asif Khan", email = "asifkhan.tech.2003@gmail.com" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+# Runtime dependencies of the MCP server and the shared core.
+dependencies = [
+  "fastmcp>=2.14,<3",
+  "sqlalchemy>=2.0,<3",
+  "pydantic>=2.7,<3",
+  "pydantic-settings>=2.2,<3",
+]
+
+[project.optional-dependencies]
+# AI host (LangChain agent that talks to the MCP server).
+agent = [
+  "langchain>=1.0,<2",
+  "langchain-core>=1.0,<2",
+  "langgraph>=1.0,<2",
+  "langchain-mcp-adapters>=0.1,<1",
+  "langchain-openrouter>=0.1,<1",
+]
+# Streamlit front-end for the AI host.
+ui = [
+  "expense-tracker[agent]",
+  "streamlit>=1.50,<2",
+  "pandas>=2.0",
+]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "pytest-cov>=5.0",
+  "ruff>=0.6",
+  "mypy>=1.10",
+  "pre-commit>=3.7",
+]
+all = ["expense-tracker[agent,ui]"]
+
+[project.scripts]
+expense-tracker-mcp = "expense_tracker.mcp_server.server:main"
+expense-tracker-agent = "expense_tracker.host.cli:main"
+expense-tracker-ui = "expense_tracker.ui.launcher:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+expense_tracker = ["py.typed"]
+
+# --------------------------------------------------------------------------- #
+# Tooling
+# --------------------------------------------------------------------------- #
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers"
+markers = [
+  "integration: tests that start the MCP server subprocess",
+]
+
+[tool.coverage.run]
+source = ["expense_tracker"]
+omit = ["src/expense_tracker/ui/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+extend-exclude = ["build", "dist"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes
+  "I",        # isort
+  "B",        # bugbear
+  "UP",       # pyupgrade
+  "SIM",      # simplify
+  "N",        # pep8-naming
+  "C4",       # comprehensions
+  "RUF",      # ruff-specific
+  "S",        # bandit (security)
+  "T20",      # no stray print()
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+"src/expense_tracker/host/cli.py" = ["T201"]   # the CLI is allowed to print
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["langchain_mcp_adapters.*", "langchain_openrouter.*", "streamlit.*", "pandas.*"]
+ignore_missing_imports = true
